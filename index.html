@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Interplanetary Prospecting Corporation | SPARTA</title>
     
     <link rel="icon" type="image/x-icon" href="favicon.ico">
@@ -19,9 +19,8 @@
             color: #ffffff; 
             font-family: 'Rajdhani', sans-serif;
             margin: 0;
-            /* Prevents horizontal scrolling entirely */
             overflow-x: hidden; 
-            width: 100vw;
+            width: 100%;
         }
         
         h1, h2, h3, .nav-logo { 
@@ -45,28 +44,29 @@
             justify-content: center;
         }
 
-        /* THE FIX: Independent Mobile vs Desktop Title Logic */
         .main-title {
             text-align: center;
             width: 100%;
-            padding: 0 5%;
-            overflow-wrap: anywhere; /* Safety break if all else fails */
+            padding: 0 4%;
         }
 
-        /* Mobile specific: Force it small enough to never overflow */
+        /* MOBILE FIX: 6vw ensures 'Interplanetary' fits on one line */
         @media (max-width: 767px) {
             .main-title {
-                font-size: 7vw; /* Scales exactly to screen width */
-                line-height: 1.4;
+                font-size: 6vw !important; 
+                line-height: 1.5;
+                letter-spacing: -0.02em; /* Tighter fit for long words */
+                white-space: nowrap; /* Prevents word wrapping */
             }
             .br-desktop { display: none; }
         }
 
-        /* Desktop specific: Large and centered */
+        /* DESKTOP: Original large format */
         @media (min-width: 768px) {
             .main-title {
                 font-size: 4rem;
                 line-height: 1.1;
+                white-space: normal;
             }
             .br-desktop { display: block; }
         }
