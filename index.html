@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interplanetary Prospecting Corporation | SPARTA</title>
     
     <link rel="icon" type="image/x-icon" href="favicon.ico">
@@ -40,6 +40,7 @@
             width: 100%;
             min-height: 85vh;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
         }
@@ -47,26 +48,26 @@
         .main-title {
             text-align: center;
             width: 100%;
-            padding: 0 4%;
+            padding: 0 20px;
+            box-sizing: border-box;
         }
 
-        /* MOBILE FIX: 6vw ensures 'Interplanetary' fits on one line */
+        /* MOBILE FIX: Fixed size to prevent overflow */
         @media (max-width: 767px) {
             .main-title {
-                font-size: 6vw !important; 
-                line-height: 1.5;
-                letter-spacing: -0.02em; /* Tighter fit for long words */
-                white-space: nowrap; /* Prevents word wrapping */
+                font-size: 1.65rem !important; 
+                line-height: 1.4;
+                letter-spacing: 0.05em;
+                word-wrap: break-word;
             }
             .br-desktop { display: none; }
         }
 
-        /* DESKTOP: Original large format */
+        /* DESKTOP: Large format */
         @media (min-width: 768px) {
             .main-title {
                 font-size: 4rem;
-                line-height: 1.1;
-                white-space: normal;
+                line-height: 1.2;
             }
             .br-desktop { display: block; }
         }
