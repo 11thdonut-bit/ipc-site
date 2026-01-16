@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interplanetary Prospecting Corporation | SPARTA</title>
     
     <link rel="icon" type="image/x-icon" href="favicon.ico">
@@ -18,10 +18,10 @@
             background-color: var(--space-black); 
             color: #ffffff; 
             font-family: 'Rajdhani', sans-serif;
-            overflow-x: hidden;
-            width: 100%;
             margin: 0;
-            -webkit-font-smoothing: antialiased;
+            /* Prevents horizontal scrolling entirely */
+            overflow-x: hidden; 
+            width: 100vw;
         }
         
         h1, h2, h3, .nav-logo { 
@@ -39,35 +39,43 @@
             background-position: center;
             background-attachment: fixed;
             width: 100%;
-            min-height: 80vh;
+            min-height: 85vh;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        /* DYNAMIC FONT CLAMPING */
-        /* clamp(MIN, PREFERRED, MAX) */
-        .responsive-title {
-            font-size: clamp(1.4rem, 6.5vw, 4.5rem);
-            line-height: 1.2;
+        /* THE FIX: Independent Mobile vs Desktop Title Logic */
+        .main-title {
             text-align: center;
             width: 100%;
-            display: block;
-            /* Prevents the long word from breaking */
-            word-break: keep-all;
-            overflow-wrap: normal;
+            padding: 0 5%;
+            overflow-wrap: anywhere; /* Safety break if all else fails */
         }
 
-        /* Forces 'Interplanetary' to stay as one unit on small screens */
-        .force-single-line {
-            display: inline-block;
-            white-space: nowrap;
+        /* Mobile specific: Force it small enough to never overflow */
+        @media (max-width: 767px) {
+            .main-title {
+                font-size: 7vw; /* Scales exactly to screen width */
+                line-height: 1.4;
+            }
+            .br-desktop { display: none; }
+        }
+
+        /* Desktop specific: Large and centered */
+        @media (min-width: 768px) {
+            .main-title {
+                font-size: 4rem;
+                line-height: 1.1;
+            }
+            .br-desktop { display: block; }
         }
 
         .profile-container { 
             background: rgba(10, 10, 10, 0.95); 
             backdrop-filter: blur(15px); 
             border: 2px solid var(--vibrant-gold);
+            width: 100%;
         }
 
         .spec-module, .personnel-card {
@@ -88,13 +96,6 @@
         }
 
         a:active, a:focus, a:visited { color: inherit; }
-
-        /* Desktop Breakpoint adjustment */
-        @media (min-width: 1024px) {
-            .responsive-title {
-                line-height: 1.1;
-            }
-        }
     </style>
 </head>
 <body class="antialiased">
@@ -105,10 +106,9 @@
     </nav>
 
     <header class="hero-space-bg px-4 text-center">
-        <div class="max-w-6xl mx-auto relative z-10">
-            <h1 class="responsive-title font-normal tracking-tight mb-8 text-white">
-                <span class="force-single-line">Interplanetary</span><br class="hidden md:block" /> 
-                <span class="force-single-line">Prospecting Corporation</span>
+        <div class="max-w-6xl mx-auto relative z-10 w-full">
+            <h1 class="main-title font-normal tracking-tight mb-8 text-white">
+                Interplanetary <br class="br-desktop" /> Prospecting Corporation
             </h1>
             <p class="text-sm md:text-lg text-gray-300 mb-12 max-w-2xl mx-auto leading-relaxed font-light tracking-wide uppercase px-4">
                 Engineering the foundational tools for resource exploration and the expansion of the extraterrestrial economy.
@@ -121,7 +121,7 @@
         </div>
     </header>
 
-    <section class="py-16 md:py-24 px-4 md:px-6 bg-black">
+    <section class="py-16 md:py-24 px-4 md:px-6 bg-black overflow-hidden">
         <div class="max-w-6xl mx-auto">
             <div class="profile-container p-6 md:p-16 rounded-sm">
                 <div class="text-center mb-12">
