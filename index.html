@@ -18,7 +18,8 @@
             background-color: var(--space-black); 
             color: #ffffff; 
             font-family: 'Rajdhani', sans-serif;
-            overflow-x: hidden; /* Prevents side-scrolling on mobile */
+            overflow-x: hidden;
+            width: 100%;
         }
         h1, h2, h3, .nav-logo { 
             font-family: 'Michroma', sans-serif; 
@@ -26,14 +27,15 @@
         }
         .gold-text { color: var(--vibrant-gold) !important; }
         
-        /* Hero Background */
+        /* Hero Background - Restored to Fixed for Zoom Effect */
         .hero-space-bg {
             position: relative;
             background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), 
                         url('earth-moon-orbit.jpg');
             background-size: cover;
             background-position: center;
-            background-attachment: scroll; /* Changed from fixed for better mobile performance */
+            background-attachment: fixed;
+            width: 100%;
         }
 
         .profile-container { 
@@ -57,6 +59,7 @@
             text-transform: uppercase;
             letter-spacing: 0.2em;
             text-decoration: none;
+            display: inline-block;
         }
         .cta-button:hover {
             background-color: var(--vibrant-gold);
@@ -64,7 +67,21 @@
             box-shadow: 0 0 25px rgba(255, 215, 0, 0.5);
         }
 
-        /* Prevent link darkening */
+        /* Responsive Title Correction */
+        .responsive-title {
+            font-size: calc(1.5rem + 5vw);
+            line-height: 1.1;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            hyphens: auto;
+        }
+
+        @media (min-width: 768px) {
+            .responsive-title {
+                font-size: 3.75rem; /* Standard 6xl */
+            }
+        }
+
         a:active, a:focus, a:visited {
             color: inherit;
         }
@@ -79,7 +96,7 @@
 
     <header class="hero-space-bg py-32 md:py-56 px-4 text-center">
         <div class="max-w-5xl mx-auto relative z-10">
-            <h1 class="text-[8vw] md:text-6xl font-normal tracking-tight mb-8 leading-tight text-white px-2">
+            <h1 class="responsive-title font-normal tracking-tight mb-8 text-white px-2">
                 Interplanetary <br />
                 Prospecting Corporation
             </h1>
@@ -104,7 +121,7 @@
                     </h2>
                 </div>
 
-                <div class="mb-12 md:mb-16">
+                <div class="mb-12 md:mb-16 px-2">
                     <p class="text-lg md:text-2xl leading-relaxed font-light text-gray-100 text-center">
                         The SPARTA toolkit is a high-precision instrument designed for the complex requirements of regolith analysis on alien worlds. Having been developed and tested rigorously at the <strong>Jet Propulsion Laboratory</strong> in Southern California over the past several years, the SPARTA toolkit is based on <strong>published science</strong>. It provides the cost effectiveness and scientific prowess necessary to establish the space economy of the 21st century on the Moon, Mars, and beyond.
                     </p>
@@ -117,7 +134,7 @@
                         </h3>
                     </div>
                     
-                    <div class="max-w-4xl mx-auto">
+                    <div class="max-w-4xl mx-auto px-2">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 font-bold tracking-[0.15em] text-[10px] md:text-[11px] uppercase mb-4">
                             <div class="spec-module gold-text">Cone Penetration Tester</div>
                             <div class="spec-module gold-text">Vane Shear Tester</div>
