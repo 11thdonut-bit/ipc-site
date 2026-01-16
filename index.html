@@ -36,6 +36,32 @@
             width: 100%;
         }
 
+        /* Title Logic: Large on Desktop, Auto-Shrink on Mobile */
+        .responsive-title {
+            line-height: 1.2;
+            text-align: center;
+            display: inline-block;
+            width: 100%;
+        }
+
+        /* Mobile specific: Force single line and scale font to width */
+        @media (max-width: 767px) {
+            .responsive-title {
+                font-size: 6.5vw; /* Scales font based on screen width */
+                white-space: nowrap;
+                padding: 0 10px;
+            }
+            .br-mobile-hide { display: none; }
+        }
+
+        /* Desktop specific: Back to original size */
+        @media (min-width: 768px) {
+            .responsive-title {
+                font-size: 4rem;
+                white-space: normal;
+            }
+        }
+
         .profile-container { 
             background: rgba(10, 10, 10, 0.95); 
             backdrop-filter: blur(15px); 
@@ -59,25 +85,6 @@
             display: inline-block;
         }
 
-        /* Mobile-First Responsive Title */
-        .responsive-title {
-            /* Clamp: Min 1.5rem, Preferred 7.5vw, Max 4rem */
-            font-size: clamp(1.5rem, 7.5vw, 4rem);
-            line-height: 1.2;
-            text-align: center;
-        }
-
-        /* Force Interplanetary to stay on one line */
-        .no-break {
-            white-space: nowrap;
-        }
-
-        @media (min-width: 768px) {
-            .responsive-title {
-                font-size: 4rem;
-            }
-        }
-
         a:active, a:focus, a:visited {
             color: inherit;
         }
@@ -91,10 +98,9 @@
     </nav>
 
     <header class="hero-space-bg py-32 md:py-56 px-4 text-center">
-        <div class="max-w-5xl mx-auto relative z-10">
-            <h1 class="responsive-title font-normal tracking-tight mb-8 text-white px-2">
-                <span class="no-break">Interplanetary</span> <br class="hidden md:block" />
-                <span class="no-break">Prospecting Corporation</span>
+        <div class="max-w-6xl mx-auto relative z-10">
+            <h1 class="responsive-title font-normal tracking-tight mb-8 text-white">
+                Interplanetary<br class="br-mobile-hide" /> Prospecting Corporation
             </h1>
             <p class="text-sm md:text-lg text-gray-300 mb-12 max-w-2xl mx-auto leading-relaxed font-light tracking-wide uppercase px-4">
                 Engineering the foundational tools for resource exploration and the expansion of the extraterrestrial economy.
