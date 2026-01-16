@@ -3,93 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interplanetary Prospecting Corporation | SPARTA</title>
     
+    <title>Interplanetary Prospecting Corporation | SPARTA Toolkit</title>
+    <meta name="description" content="Interplanetary Prospecting Corporation (IPC) engineering the SPARTA toolkit for extraterrestrial soil analysis and space resource exploration.">
+    <meta name="keywords" content="Interplanetary Prospecting, SPARTA, space mining, lunar regolith, planetary science, JPL, extraterrestrial exploration">
+    <meta name="author" content="Neven Husson">
+
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     
     <meta property="og:title" content="Interplanetary Prospecting Corporation">
-    <meta property="og:description" content="Engineering the foundational tools for resource exploration and the expansion of the extraterrestrial economy.">
+    <meta property="og:description" content="Engineering the foundational tools for the expansion of the extraterrestrial economy.">
     <meta property="og:image" content="earth-moon-orbit.jpg">
-    <meta property="og:url" content="https://yourdomain.com">
+    <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
 
     <link href="https://fonts.googleapis.com/css2?family=Michroma&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root {
-            --vibrant-gold: #FFD700; 
-            --space-black: #050505;
-        }
-        body { 
-            background-color: var(--space-black); 
-            color: #ffffff; 
-            font-family: 'Rajdhani', sans-serif;
-            margin: 0;
-            overflow-x: hidden; 
-            width: 100%;
-        }
-        h1, h2, h3, .nav-logo { 
-            font-family: 'Michroma', sans-serif; 
-            text-transform: uppercase;
-        }
+        :root { --vibrant-gold: #FFD700; --space-black: #050505; }
+        body { background-color: var(--space-black); color: #ffffff; font-family: 'Rajdhani', sans-serif; margin: 0; overflow-x: hidden; width: 100%; }
+        h1, h2, h3, .nav-logo { font-family: 'Michroma', sans-serif; text-transform: uppercase; }
         .gold-text { color: var(--vibrant-gold) !important; }
         .hero-space-bg {
             position: relative;
-            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), 
-                        url('earth-moon-orbit.jpg');
+            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('earth-moon-orbit.jpg');
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
-            width: 100%;
-            min-height: 85vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+            width: 100%; min-height: 85vh;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
-        .main-title {
-            text-align: center;
-            width: 100%;
-            padding: 0 20px;
-            box-sizing: border-box;
-        }
+        .main-title { text-align: center; width: 100%; padding: 0 20px; box-sizing: border-box; }
         @media (max-width: 767px) {
-            .main-title {
-                font-size: 1.65rem !important; 
-                line-height: 1.4;
-                letter-spacing: 0.05em;
-                word-wrap: break-word;
-            }
+            .main-title { font-size: 1.65rem !important; line-height: 1.4; letter-spacing: 0.05em; word-wrap: break-word; }
             .br-desktop { display: none; }
         }
         @media (min-width: 768px) {
-            .main-title {
-                font-size: 4rem;
-                line-height: 1.2;
-            }
+            .main-title { font-size: 4rem; line-height: 1.2; }
             .br-desktop { display: block; }
         }
-        .profile-container { 
-            background: rgba(10, 10, 10, 0.95); 
-            backdrop-filter: blur(15px); 
-            border: 2px solid var(--vibrant-gold);
-            width: 100%;
-        }
-        .spec-module, .personnel-card {
-            border: 1px solid rgba(255, 215, 0, 0.4);
-            background: rgba(255, 215, 0, 0.02);
-            padding: 1.5rem;
-            text-align: center;
-        }
-        .cta-button {
-            border: 1px solid var(--vibrant-gold);
-            color: var(--vibrant-gold) !important;
-            transition: all 0.4s ease;
-            text-transform: uppercase;
-            letter-spacing: 0.2em;
-            text-decoration: none;
-            display: inline-block;
-        }
+        .profile-container { background: rgba(10, 10, 10, 0.95); backdrop-filter: blur(15px); border: 2px solid var(--vibrant-gold); width: 100%; }
+        .spec-module, .personnel-card { border: 1px solid rgba(255, 215, 0, 0.4); background: rgba(255, 215, 0, 0.02); padding: 1.5rem; text-align: center; }
+        .cta-button { border: 1px solid var(--vibrant-gold); color: var(--vibrant-gold) !important; transition: all 0.4s ease; text-transform: uppercase; letter-spacing: 0.2em; text-decoration: none; display: inline-block; }
         a:active, a:focus, a:visited { color: inherit; }
     </style>
 </head>
@@ -108,9 +63,7 @@
                 Engineering the foundational tools for resource exploration and the expansion of the extraterrestrial economy.
             </p>
             <div class="flex justify-center uppercase text-[11px] tracking-[0.2em] font-bold">
-                <a href="mailto:husson@alumni.usc.edu?subject=SPARTA Inquiry" class="cta-button px-8 md:px-12 py-4">
-                    Pre-Order SPARTA
-                </a>
+                <a href="mailto:husson@alumni.usc.edu?subject=SPARTA Inquiry" class="cta-button px-8 md:px-12 py-4">Pre-Order SPARTA</a>
             </div>
         </div>
     </header>
@@ -120,18 +73,15 @@
             <div class="profile-container p-6 md:p-16 rounded-sm">
                 <div class="text-center mb-12">
                     <h2 class="text-xs md:text-base font-bold tracking-[0.2em] md:tracking-[0.25em] text-white uppercase leading-relaxed">
-                        System Profile: Soil Properties Assessment Resistance Thermal Analysis toolkit [SPARTA]
+                        System Profile: SPARTA Toolkit
                     </h2>
                 </div>
                 <div class="mb-12 md:mb-16">
                     <p class="text-lg md:text-2xl leading-relaxed font-light text-gray-100 text-center">
-                        The SPARTA toolkit is a high-precision instrument designed for the complex requirements of regolith analysis on alien worlds. Having been developed and tested rigorously at the <strong>Jet Propulsion Laboratory</strong> in Southern California over the past several years, the SPARTA toolkit is based on <strong>published science</strong>. It provides the cost effectiveness and scientific prowess necessary to establish the space economy of the 21st century on the Moon, Mars, and beyond.
+                        Developed and tested rigorously at the <strong>Jet Propulsion Laboratory</strong>, SPARTA provides the scientific prowess necessary to establish the space economy of the 21st century.
                     </p>
                 </div>
                 <div class="pt-10 md:pt-12 border-t border-white/10">
-                    <div class="text-center mb-10">
-                        <h3 class="text-sm font-bold tracking-[0.3em] text-white uppercase">Technical Specifications</h3>
-                    </div>
                     <div class="max-w-4xl mx-auto px-2">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 font-bold tracking-[0.15em] text-[10px] md:text-[11px] uppercase mb-4">
                             <div class="spec-module gold-text">Cone Penetration Tester</div>
@@ -139,32 +89,7 @@
                             <div class="spec-module gold-text">Thermal Conductivity Probe</div>
                             <div class="spec-module gold-text">Dielectric Spectroscopy Probe</div>
                         </div>
-                        <div class="spec-module gold-text font-bold tracking-[0.2em] text-[11px] md:text-[12px] uppercase border-gold">
-                            Maximum Depth Capacity: 25 cm
-                        </div>
                     </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section class="py-16 md:py-24 px-6 border-t border-white/10 bg-zinc-950">
-        <div class="max-w-6xl mx-auto">
-            <div class="text-center mb-16">
-                <h2 class="text-sm font-bold tracking-[0.3em] text-white uppercase">Executive Personnel</h2>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-                <div class="personnel-card rounded-sm">
-                    <h3 class="gold-text text-lg font-bold tracking-wider mb-2">Neven Husson</h3>
-                    <p class="text-white text-[9px] tracking-[0.2em] uppercase opacity-70">Chief Executive Officer</p>
-                </div>
-                <div class="personnel-card rounded-sm">
-                    <h3 class="gold-text text-lg font-bold tracking-wider mb-2">Dr. Bob Anderson</h3>
-                    <p class="text-white text-[9px] tracking-[0.2em] uppercase opacity-70">Co-Chief Science Officer</p>
-                </div>
-                <div class="personnel-card rounded-sm">
-                    <h3 class="gold-text text-lg font-bold tracking-wider mb-2">Dr. Keith Chin</h3>
-                    <p class="text-white text-[9px] tracking-[0.2em] uppercase opacity-70">Co-Chief Science Officer</p>
                 </div>
             </div>
         </div>
@@ -173,12 +98,9 @@
     <section id="contact" class="py-20 md:py-32 px-6 text-center border-t border-white/10 bg-black">
         <div class="max-w-4xl mx-auto">
             <h2 class="text-xl md:text-2xl font-normal mb-8 tracking-[0.2em] uppercase">Initiate Deployment</h2>
-            <div class="inline-block">
-                <p class="text-[9px] gold-text font-bold uppercase tracking-[0.5em] mb-4">Transmission Channel</p>
-                <a href="mailto:husson@alumni.usc.edu" class="text-xl md:text-4xl font-normal text-white hover:gold-text transition-colors duration-500 tracking-wider underline underline-offset-[12px] decoration-gold/20 hover:decoration-gold no-underline">
-                    husson@alumni.usc.edu
-                </a>
-            </div>
+            <a href="mailto:husson@alumni.usc.edu" class="text-xl md:text-4xl font-normal text-white hover:gold-text transition-colors duration-500 tracking-wider underline underline-offset-[12px] decoration-gold/20 hover:decoration-gold no-underline">
+                husson@alumni.usc.edu
+            </a>
         </div>
     </section>
 
