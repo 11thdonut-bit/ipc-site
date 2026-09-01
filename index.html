@@ -1810,8 +1810,14 @@ function buildMoonDeco(mr){
   x.restore();                                          /* end lit-side clip */
 
   x.restore();
+  var rimW=Math.max(1,R*0.005);
   x.beginPath(); x.arc(cx,cy,R,0,TAU);
-  x.strokeStyle='rgba(226,220,206,0.22)'; x.lineWidth=Math.max(1,R*0.005); x.stroke();
+  x.strokeStyle='rgba(226,220,206,0.22)'; x.lineWidth=rimW; x.stroke();
+  /* Where the body's outer edge actually falls inside this texture, as a
+     fraction of the canvas half-width.  drawMoon scales by it so the limb
+     lands exactly on mr, and the mask and the settlement clip can then use
+     mr itself instead of the guessed 1.008 / 0.985 they used before. */
+  c.bodyFrac=(R+rimW*0.5)/(S/2);
   return c;
 }
 function moonPixFor(mr){
@@ -2016,6 +2022,7 @@ function buildMoonTex(mr){
     sg2.filter='none';
     c=sm;
   }
+  c.bodyFrac=R/(S/2);
   return c;
 }
 /* Two textures, both built off the click path: the portal disc immediately,
@@ -2041,7 +2048,7 @@ function drawMoon(t){
   if(!tex) return;
   g.save();
   g.globalCompositeOperation='lighter';
-  g.beginPath(); g.rect(0,0,W,H); g.arc(mx,my,mr*0.995,0,TAU,true); g.clip();
+  g.beginPath(); g.rect(0,0,W,H); g.arc(mx,my,mr,0,TAU,true); g.clip();
   var hl=g.createRadialGradient(mx,my,mr*0.99,mx,my,mr*3.0);
   hl.addColorStop(0.00,'rgba(178,196,232,'+(hover===1?0.10:0.042)+')');
   hl.addColorStop(0.30,'rgba(178,196,232,'+(hover===1?0.040:0.016)+')');
@@ -2050,7 +2057,9 @@ function drawMoon(t){
   g.restore();
   g.save();
   if(hover===1) g.filter='brightness(1.22)';
-  g.drawImage(tex, mx-mr, my-mr, mr*2, mr*2);
+  /* scale so the body's edge is at mr exactly, not the canvas edge */
+  var dr=mr/(tex.bodyFrac||1);
+  g.drawImage(tex, mx-dr, my-dr, dr*2, dr*2);
   g.restore();
 }
 
@@ -2144,194 +2153,373 @@ function moonNormal(latDeg,lonDeg){
   return [cp*Math.sin(l), Math.sin(p), cp*Math.cos(l)];
 }
 function inShadow(n){ return (n[0]*SUN[0]+n[1]*SUN[1]+n[2]*SUN[2]) < -0.10 && n[0] > -0.60; }
+/* ---------------------------------------------------------------------------
+   The settlement of the Moon, told in three stages.
+
+   His description, followed closely: a handful of first colonies clustered at
+   the south pole, sharp lines drawn between them, then expansion radiating out
+   from that connected core, a couple of new colonies further out, and a few
+   sharp lines striking outward from the pole settlement.  The north pole
+   repeats the story on its own, and a pan-lunar stage of ring cities takes the
+   equatorial band that is left.
+
+   Each polar network is capped at a quarter of the lunar surface — a cap of
+   half-angle 60 degrees, since (1 - cos 60) / 2 = 0.25.
+--------------------------------------------------------------------------- */
 function buildCity(rnd){
   var pts=[];
-  function clamp1(v){ return v<-1?-1:(v>1?1:v); }
-  /* An origin sits as close to its pole as the geometry allows, which puts it
-     hard on the limb: a polar colony is meant to run over the edge, so only
-     its near half is ever visible and the rest is on the far side. */
-  function findSeed(la0,la1,step,floor){
-    for(var la=la0;(step>0?la<=la1:la>=la1);la+=step){
-      for(var t=0;t<72;t++){
-        var lo=-150+rnd()*300, nn=moonNormal(la,lo);
-        if(nn[2]<floor||!inShadow(nn)) continue;
-        return {lat:la,lon:lo,n:nn};
+  function nrm(v){ var L=Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2])||1;
+                   return [v[0]/L,v[1]/L,v[2]/L]; }
+  function crs(a,b){ return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
+  function dt3(a,b){ return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
+  function ang(a,b){ return Math.acos(Math.max(-1,Math.min(1,dt3(a,b)))); }
+  function basis(n){ var u=Math.abs(n[1])<0.9?[0,1,0]:[1,0,0];
+                     var t1=nrm(crs(u,n)); return [t1, crs(n,t1)]; }
+  function slerp(a,b,t){
+    var d=Math.max(-1,Math.min(1,dt3(a,b))), th=Math.acos(d);
+    if(th<1e-5) return [a[0],a[1],a[2]];
+    var s=Math.sin(th), k0=Math.sin((1-t)*th)/s, k1=Math.sin(t*th)/s;
+    return nrm([a[0]*k0+b[0]*k1, a[1]*k0+b[1]*k1, a[2]*k0+b[2]*k1]);
+  }
+  /* a great-circle step of d radians from n, heading along azimuth az */
+  function walk(n,az,d){
+    var B=basis(n), ca=Math.cos(az), sa=Math.sin(az);
+    var t=[B[0][0]*ca+B[1][0]*sa, B[0][1]*ca+B[1][1]*sa, B[0][2]*ca+B[1][2]*sa];
+    var cd=Math.cos(d), sd=Math.sin(d);
+    return nrm([n[0]*cd+t[0]*sd, n[1]*cd+t[1]*sd, n[2]*cd+t[2]*sd]);
+  }
+  function jit(n,r){ return walk(n, rnd()*TAU, Math.sqrt(rnd())*r); }
+  function inCap(axis,maxA){
+    var c=Math.cos(maxA), z=c+(1-c)*rnd();
+    return walk(axis, rnd()*TAU, Math.acos(Math.max(-1,Math.min(1,z))));
+  }
+  function inBand(b){
+    var la=(b[0]+(b[1]-b[0])*rnd())*Math.PI/180, lo=(rnd()*360-180)*Math.PI/180;
+    var cl=Math.cos(la);
+    return [cl*Math.sin(lo), Math.sin(la), cl*Math.cos(lo)];
+  }
+  function ok(n){ return n[2]>=0.05 && inShadow(n); }
+  function put(n,at,s,w){
+    if(!ok(n)) return false;
+    if(at<0) at=0; else if(at>0.999) at=0.999;
+    pts.push({n:n, at:at, s:s, w:w, ph:rnd()*TAU});
+    return true;
+  }
+  /* A line of light, drawn sharp: densely sampled along the great circle with
+     almost no wander, so it reads as a drawn line rather than a drift of dots.
+     Everything about a corridor is deliberately dimmer than the colonies it
+     joins — the places are the bright things, the links are threads. */
+  function line(a,b,t0,t1,wob,store){
+    var L=ang(a,b); if(L<1e-4) return;
+    var N=Math.max(14,Math.round(L*300));
+    for(var k=0;k<=N;k++){
+      var u=k/N, p=slerp(a,b,u);
+      if(wob) p=jit(p, wob*Math.sin(u*Math.PI));
+      if(store) store.push(p);
+      put(p, t0+(t1-t0)*u, 0.46+rnd()*0.34, 0.20+rnd()*0.34);
+    }
+  }
+  /* The shape vocabulary.  Settlements in the middle band are not all rings:
+     full circles, half and quarter arcs, triangles, broken rings and blobs, at
+     a wide spread of sizes and orientations, several overlapping at one site.
+     The point is that it should look grown rather than placed. */
+  function arcRun(c,rad,rot,sweep,n,t0,t1,wA,wB,sA,sB,wob){
+    for(var i=0;i<=n;i++){
+      var u=n?i/n:0, az=rot+sweep*u;
+      var rr=rad*(1+(rnd()-0.5)*(wob||0.06));
+      put(walk(c,az,rr), t0+(t1-t0)*u, sA+rnd()*sB, wA+rnd()*wB);
+    }
+  }
+  function polyRun(c,rad,rot,sides,t0,t1,wA,wB,sA,sB){
+    var V=[];
+    for(var v=0;v<sides;v++) V.push(walk(c,rot+v*TAU/sides,rad));
+    for(var e=0;e<sides;e++){
+      var a=V[e], b=V[(e+1)%sides], L=ang(a,b), N=Math.max(6,Math.round(L*240));
+      for(var k=0;k<=N;k++){
+        var u=(e+k/N)/sides;
+        put(jit(slerp(a,b,k/N), L*0.16), t0+(t1-t0)*u, sA+rnd()*sB, wA+rnd()*wB);
       }
     }
-    return null;
   }
-  var S=findSeed(-89.5,-40,0.4,0.045);
-  if(!S) return pts;
-  var N=findSeed(89.5,40,-0.4,0.045);          /* the north pole, second wave */
-  var E=findSeed(7,26,0.5,0.14);               /* just above the equator */
-
-  /* Three fronts.  The south runs from the start; the north and the equator
-     only begin once the south has covered a little under a fifth of the
-     surface, so the sequence reads as one settled region seeding the next. */
-  var ORIG=[S]; if(N) ORIG.push(N); if(E) ORIG.push(E);
-  var FAM_S=0, FAM_N=N?1:-1, FAM_E=E?(N?2:1):-1;
-  function angTo(n,o){
-    return Math.acos(clamp1(n[0]*o.n[0]+n[1]*o.n[1]+n[2]*o.n[2]));
-  }
-  function nearestOrig(n){
-    var b=0,bd=1e9;
-    for(var k=0;k<ORIG.length;k++){ var d=angTo(n,ORIG[k]); if(d<bd){bd=d;b=k;} }
-    return {f:b,d:bd};
-  }
-
-  /* Settlement sites thin out with distance from their own origin, so each
-     field stays densest at its centre and reads as expansion rather than as
-     scattered dots appearing all over the disc at once. */
-  var GROUPS=64, anchors=[{lat:S.lat,lon:S.lon,f:FAM_S,d:0}];
-  if(N) anchors.push({lat:N.lat,lon:N.lon,f:FAM_N,d:0});
-  if(E) anchors.push({lat:E.lat,lon:E.lon,f:FAM_E,d:0});
-  for(var g=0;g<GROUPS*60&&anchors.length<GROUPS;g++){
-    var la2=Math.asin(2*rnd()-1)*180/Math.PI, lo2=-180+rnd()*360;
-    var n2=moonNormal(la2,lo2);
-    if(n2[2]<0.07||!inShadow(n2)) continue;
-    var no=nearestOrig(n2);
-    if(rnd()>Math.pow(1-no.d/Math.PI,0.85)) continue;
-    anchors.push({lat:la2,lon:lo2,f:no.f,d:no.d});
-  }
-  /* A front timed purely by area advances as one clean ring.  A small per-site
-     offset staggers it: settlements appear a little before or after the line
-     reaches them, which is what an expansion actually looks like. */
-  for(var aj=ORIG.length;aj<anchors.length;aj++) anchors[aj].jit=(rnd()-0.5)*0.055;
-  /* the two nearest neighbours of the pole colony are runs, not clusters, so
-     the first thing that happens after it is a pair of lines reaching out */
-  var southN=[];
-  for(var as=ORIG.length;as<anchors.length;as++)
-    if(anchors[as].f===FAM_S) southN.push(anchors[as]);
-  southN.sort(function(a,b){return a.d-b.d;});
-  for(var ln=0;ln<Math.min(2,southN.length);ln++) southN[ln].line=true;
-
-  var span=0.5;
-  for(var gI=0;gI<anchors.length;gI++){
-    var AN=anchors[gI], sLat=AN.lat, sLon=AN.lon, fam=AN.f;
-    var gStart=0;
-    /* Shape mix, to his proportions: lines 20%, circles and arcs 7%, and the
-       rest blocks and clusters.  A city on the equator is always circular;
-       each origin itself is a dense, established settlement. */
-    var isOrigin=(gI<ORIG.length);
-    /* "Circular cities above the equator" means a band around the equatorial
-       origin, not the whole family — the equator's Voronoi region covers most
-       of the visible disc, and forcing every one of those to a ring turned the
-       Moon into a field of circles. */
-    var nearEq = !!E && angTo(moonNormal(sLat,sLon),E) < 0.42 && sLat > -4;
-    var fullC = nearEq && !AN.line;
-    var kind = AN.line ? 0.10
-             : (nearEq ? (rnd()<0.82?0.24:rnd()) : (isOrigin ? 0.55 : rnd()));
-    var out=[];
-    var cw2=Math.max(0.25,Math.cos(sLat*Math.PI/180));
-    function push(la2,lo2,at2,s2,w2){
-      out.push({lat:la2, lon:lo2/cw2+sLon, at:at2, s:s2, w:w2});
+  /* An organic mass: growth that spreads from a centre with a ragged edge and
+     an uneven interior, rather than a drawn outline. */
+  function mass(c,rad,t0,t1,wA,wB,sA,sB){
+    var lobes=2+Math.floor(rnd()*3), L=[];
+    for(var i=0;i<lobes;i++) L.push({c:i?jit(c,rad*(0.25+rnd()*0.6)):c, r:rad*(0.45+rnd()*0.6)});
+    var N=Math.round(rad*320);
+    for(var q=0;q<N;q++){
+      var lb=L[Math.floor(rnd()*L.length)];
+      var m=Math.pow(rnd(),0.5)*lb.r*(0.75+rnd()*0.5);   /* ragged edge */
+      put(jit(lb.c,m), t0+(t1-t0)*Math.pow(rnd(),0.7), sA+rnd()*sB, wA+rnd()*wB);
     }
-    if(kind<0.20){
-      /* runs and arms — these read as lines */
-      var len=9+rnd()*24, bear=rnd()*TAU, curve=(rnd()-0.5)*0.7, cnt=26+Math.floor(rnd()*30);
-      for(var i=0;i<cnt;i++){
-        var fq=Math.pow(rnd(),0.85), bb=bear+curve*fq;
-        var wob=(rnd()-0.5)*len*0.10;
-        push(sLat+Math.sin(bb)*len*fq-Math.cos(bb)*wob+(rnd()-0.5)*0.9,
-             Math.cos(bb)*len*fq+Math.sin(bb)*wob+(rnd()-0.5)*1.3,
-             gStart+span*0.032*fq*(0.7+0.6*rnd()), 0.55+rnd()*0.55, rnd()*0.55);
+  }
+  /* `loose` blurs an outline toward a drift of settlement.  Almost everything
+     in the middle band is grown rather than drawn: distinct geometry is the
+     rare exception, not the rule. */
+  function shape(c,rad,t0,t1,wA,wB,sA,sB,loose){
+    var kind=rnd(), rot=rnd()*TAU, lo=(loose===undefined?0.26:loose);
+    var n=Math.max(14,Math.round(rad*760));
+    if(kind<0.50){ mass(c,rad,t0,t1,wA,wB,sA,sB); return; }
+    if(kind<0.70){                                        /* a ragged partial ring */
+      var gaps=2+Math.floor(rnd()*2);
+      for(var s=0;s<gaps;s++){
+        var a0=rot+s*TAU/gaps, sw=TAU/gaps*(0.40+rnd()*0.35);
+        arcRun(c,rad,a0,sw,Math.max(6,Math.round(n/gaps*0.7)),
+               t0+(t1-t0)*s/gaps,t1,wA,wB,sA,sB,lo);
       }
-    } else if(kind<0.27){
-      /* full, half and quarter circles */
-      var rad=(fullC?9:6)+rnd()*(fullC?11:13), a0=rnd()*TAU, rs=rnd();
-      var sweep=(fullC||rs<0.34?TAU:(rs<0.68?Math.PI:Math.PI/2))*(rnd()<0.5?1:-1);
-      var cnt2=(fullC?46:26)+Math.floor(rnd()*28);
-      for(var j=0;j<cnt2;j++){
-        var f2=j/(cnt2-1), th=a0+sweep*f2;
-        var rr2=rad*(0.96+(rnd()-0.5)*0.11);
-        push(sLat+Math.sin(th)*rr2*0.75+(rnd()-0.5)*0.9,
-             Math.cos(th)*rr2+(rnd()-0.5)*1.2,
-             gStart+span*0.034*f2*(0.7+0.6*rnd()), 0.52+rnd()*0.52, rnd()*0.55);
+      for(var q2=0;q2<Math.round(rad*180);q2++)
+        put(jit(c,Math.pow(rnd(),0.5)*rad*0.9), t0+(t1-t0)*rnd(), sA+rnd()*sB, wA+rnd()*wB);
+      return;
+    }
+    if(kind<0.87) arcRun(c,rad,rot,Math.PI/2*(rnd()<0.5?1:-1), Math.round(n*0.34), t0,t1,wA,wB,sA,sB,lo);
+    else if(kind<0.96) arcRun(c,rad,rot,TAU, n, t0,t1,wA,wB,sA,sB,lo);
+    else polyRun(c,rad,rot,3,t0,t1,wA,wB,sA,sB);
+  }
+  /* One large, deliberate city: a three-quarter ring at full size with a full
+     circle, a half circle and a quarter arc nested inside it at decreasing
+     radii, each offset a little so the layers do not read as concentric
+     drafting.  It grows outward-in, so the outer wall arrives first. */
+  function greatCity(c,R,t0,t1,wA,wB){
+    var span=t1-t0, rot=rnd()*TAU, dir=(rnd()<0.5?1:-1);
+    var layers=[
+      {r:1.00, sweep:Math.PI*1.5, wob:0.045, t:0.00, d:0.34},
+      {r:0.66, sweep:TAU,         wob:0.055, t:0.24, d:0.26},
+      {r:0.45, sweep:Math.PI,     wob:0.060, t:0.46, d:0.20},
+      {r:0.27, sweep:Math.PI/2,   wob:0.070, t:0.64, d:0.16}
+    ];
+    for(var i=0;i<layers.length;i++){
+      var L=layers[i], rr=R*L.r, ctr=i?jit(c,R*0.055):c;
+      arcRun(ctr, rr, rot+i*0.7+(rnd()-0.5)*0.5, L.sweep*dir,
+             Math.max(30,Math.round(rr*700)),
+             t0+span*L.t, t0+span*(L.t+L.d), wA,wB, 0.52,0.5, L.wob);
+      /* a little settlement banked against the inside of each wall */
+      for(var q=0;q<Math.round(rr*160);q++)
+        put(jit(ctr, rr*(0.72+rnd()*0.22)), t0+span*(L.t+L.d*rnd()),
+            0.5+rnd()*0.48, wA+rnd()*wB);
+    }
+    for(var k=0;k<Math.round(R*190);k++)                    /* the core */
+      put(jit(c,Math.pow(rnd(),0.55)*R*0.2), t0+span*(0.70+0.28*rnd()),
+          0.52+rnd()*0.5, wA+rnd()*wB);
+  }
+  function colony(c,rad,n,t,tSpread,wA,wB,sA,sB){
+    for(var i=0;i<n;i++)
+      put(jit(c, Math.pow(rnd(),0.62)*rad), t+tSpread*rnd(), sA+rnd()*sB, wA+rnd()*wB);
+  }
+
+  var CAP=Math.acos(1-2*0.25);          /* a quarter of the surface: 60 degrees */
+
+  /* ================= a polar stage ================= */
+  function polarStage(axis, t0, t1, cfg){
+    var span=t1-t0, seeds=[], guard=0;
+    /* the founding colony sits as polar as the disc will show, on the limb */
+    var best=null,bd=9;
+    for(var q=0;q<1200;q++){
+      var c0=inCap(axis,cfg.seedCap);
+      if(!ok(c0)) continue;
+      var d0=ang(c0,axis);
+      if(d0<bd){bd=d0;best=c0;}
+    }
+    if(!best) return;
+    seeds.push(best);
+    while(seeds.length<cfg.seeds && guard++<6000){
+      var c=inCap(axis,cfg.seedCap);
+      if(!ok(c)) continue;
+      var far=true;
+      for(var i=0;i<seeds.length;i++) if(ang(c,seeds[i])<cfg.sep){far=false;break;}
+      if(far) seeds.push(c);
+    }
+    var core=nrm(seeds.reduce(function(a,s){return [a[0]+s[0],a[1]+s[1],a[2]+s[2]];},[0,0,0]));
+
+    var tSeed=t0,               dSeed=span*0.15;
+    var tLink=t0+span*0.17,     dLink=span*0.20;
+    var tLate=t0+span*0.36,     dLate=span*0.24;
+    var tFill=t0+span*0.26;
+
+    /* 1 — the first colonies */
+    for(var s1=0;s1<seeds.length;s1++){
+      var born=tSeed+dSeed*(seeds.length>1?s1/(seeds.length-1):0);
+      var founder=(cfg.founder&&s1===0);
+      colony(seeds[s1], cfg.outR*(founder?1.15:0.8)*(1+rnd()*0.5),
+             Math.round(cfg.outN*(founder?3.2:1)*(0.7+rnd()*0.6)),
+             born, span*0.012,
+             (founder?0.42:0.34)*(cfg.dim||1), (founder?0.58:0.50)*(cfg.dim||1),
+             founder?0.55:0.50, founder?0.60:0.48);
+    }
+
+    /* 2 — sharp lines between them */
+    var struct=seeds.slice();
+    for(var a2=0;a2<seeds.length;a2++) for(var b2=a2+1;b2<seeds.length;b2++)
+      line(seeds[a2], seeds[b2], tLink+dLink*0.35*rnd(), tLink+dLink*(0.7+0.3*rnd()),
+           ang(seeds[a2],seeds[b2])*0.012, struct);
+
+    /* 3 — a few sharp lines striking outward from the pole settlement, and a
+           colony or two further out on the frontier */
+    /* Two lines, aimed in screen terms rather than at random.  One is sent
+       toward the viewer, so it climbs straight up the face of the Moon; the
+       other is sent toward the right limb, where the curvature foreshortens it
+       into a shallow streak along the edge.  The azimuth for a world direction
+       is just that direction resolved onto the tangent basis at the core. */
+    var B3=basis(core);
+    function azTo(v){
+      return Math.atan2(v[0]*B3[1][0]+v[1]*B3[1][1]+v[2]*B3[1][2],
+                        v[0]*B3[0][0]+v[1]*B3[0][1]+v[2]*B3[0][2]);
+    }
+    var aims=cfg.aims;
+    for(var r3=0;r3<aims.length;r3++){
+      var az=azTo(aims[r3])+(rnd()-0.5)*0.16;
+      var reach3=cfg.seedCap+(CAP-cfg.seedCap)*(aims[r3][3]||0.9)*(0.88+rnd()*0.14);
+      var far3=walk(core, az, reach3);
+      if(!ok(far3)) continue;
+      var st=tLate+dLate*0.35*rnd();
+      line(core, far3, st, st+dLate*(0.55+rnd()*0.4), 0.005, struct);
+      if(rnd()<cfg.tipColony)
+        colony(far3, cfg.outR*0.75, Math.round(cfg.outN*0.6),
+               st+dLate*0.75, span*0.02, 0.34,0.48, 0.50,0.46);
+    }
+    for(var sh=0;sh<(cfg.shapes||0);sh++){
+      var sc=null;
+      for(var gs=0;gs<500&&!sc;gs++){
+        var cd=inCap(axis,CAP);
+        if(ok(cd)&&ang(cd,core)>cfg.seedCap) sc=cd;
       }
-      if(fullC){                       /* an equatorial city has a core too */
-        for(var jc=0;jc<34;jc++){
-          var ac=rnd()*TAU, dc=Math.pow(rnd(),0.7)*rad*0.5;
-          push(sLat+Math.sin(ac)*dc*0.78, Math.cos(ac)*dc,
-               gStart+span*0.030*rnd(), 0.5+rnd()*0.5, rnd()*0.7);
+      if(!sc) continue;
+      var stt=tLate+dLate*(0.3+0.6*rnd());
+      shape(sc, cfg.outR*(0.7+rnd()*1.1), stt, stt+span*0.06, 0.34,0.50, 0.52,0.5);
+      struct.push(sc);
+    }
+    for(var n4=0;n4<cfg.later;n4++){
+      var lc=null;
+      for(var g4=0;g4<600&&!lc;g4++){
+        var cand=inCap(axis,CAP);
+        if(ok(cand)&&ang(cand,core)>cfg.seedCap*1.8) lc=cand;
+      }
+      if(!lc) continue;
+      var lt=tLate+dLate*(0.25+0.6*rnd());
+      colony(lc, cfg.outR*(0.9+rnd()*0.5), Math.round(cfg.outN*(0.8+rnd()*0.5)),
+             lt, span*0.015, 0.34,0.50, 0.50,0.48);
+      line(core, lc, lt-dLate*0.30, lt, ang(core,lc)*0.010, struct);
+      struct.push(lc);
+    }
+
+    /* 4 — expansion radiating outward from the connected core, filling the
+           space between the lines all the while */
+    var made=0, g5=0, want=cfg.fill;
+    while(made<want && g5++<want*16){
+      var cn=inCap(axis,CAP);
+      if(!ok(cn)) continue;
+      var near=9;
+      for(var a5=0;a5<struct.length;a5++){
+        var dd=ang(cn,struct[a5]); if(dd<near) near=dd;
+        if(near<0.02) break;
+      }
+      var prox=Math.max(0,1-near/(CAP*0.26));
+      var rad5=Math.min(1,ang(cn,core)/CAP);
+      if(rnd()>Math.min(1,(0.05+0.95*prox)*(1.25-0.75*rad5))) continue;
+      var at5=tFill+(t1-tFill)*(0.72*rad5+0.28*(1-prox))*(0.85+0.3*rnd());
+      if(put(cn, at5, 0.45+rnd()*0.46, 0.12+rnd()*0.56)) made++;
+    }
+  }
+
+  /* ================= the pan-lunar band ================= */
+  function bandStage(band, t0, t1, cfg){
+    var span=t1-t0, sites=[], guard=0;
+    while(sites.length<cfg.sites && guard++<9000){
+      var c=inBand(band);
+      if(!ok(c)) continue;
+      var far=true;
+      for(var i=0;i<sites.length;i++) if(ang(c,sites[i])<cfg.sep){far=false;break;}
+      if(far) sites.push(c);
+    }
+    if(!sites.length) return;
+    sites.sort(function(a,b){return a[0]-b[0];});
+    var struct=sites.slice();
+    /* Each site accretes two or three overlapping shapes of different size and
+       orientation, appearing one after another, so a settlement reads as
+       something that grew outward rather than a stamped ring. */
+    for(var s0=0;s0<sites.length;s0++){
+      var born=t0+span*0.34*(s0/Math.max(1,sites.length-1));
+      var pieces=1+Math.floor(rnd()*2);
+      /* heavily skewed: most settlements are small, a few grow large */
+      var base=cfg.outR*(0.70+2.6*Math.pow(rnd(),1.6));
+      for(var pc=0;pc<pieces;pc++){
+        var ctr=pc?jit(sites[s0], base*(0.35+rnd()*0.7)):sites[s0];
+        var rad=base*(pc?0.30+rnd()*0.95:1);
+        var pt0=born+span*0.05*pc*(0.6+rnd()*0.8);
+        shape(ctr, rad, pt0, pt0+span*0.055*(0.6+rnd()*0.8),
+              0.34,0.50, 0.50,0.48);
+        struct.push(ctr);
+        if(pc){                                  /* a tendril back to the core */
+          var Lt=ang(ctr,sites[s0]), Nt=Math.max(5,Math.round(Lt*260));
+          for(var kt=0;kt<=Nt;kt++)
+            put(jit(slerp(sites[s0],ctr,kt/Nt), Lt*0.05),
+                pt0+span*0.03*(kt/Nt), 0.46+rnd()*0.4, 0.22+rnd()*0.34);
         }
       }
-    } else if(kind<0.40){
-      /* blocks — a rectangular perimeter, sometimes with a cross street */
-      var wgt=6+rnd()*11, hgt=5+rnd()*9, rot=rnd()*TAU;
-      var cr=Math.cos(rot), sr=Math.sin(rot), cnt3=34+Math.floor(rnd()*26);
-      for(var q=0;q<cnt3;q++){
-        var e=q/cnt3*4, side=Math.floor(e), u2=e-side, ex,ey;
-        if(side===0){ ex=-wgt/2+wgt*u2; ey=-hgt/2; }
-        else if(side===1){ ex=wgt/2; ey=-hgt/2+hgt*u2; }
-        else if(side===2){ ex=wgt/2-wgt*u2; ey=hgt/2; }
-        else { ex=-wgt/2; ey=hgt/2-hgt*u2; }
-        push(sLat+(ex*sr+ey*cr)*0.75+(rnd()-0.5)*0.8,
-             (ex*cr-ey*sr)+(rnd()-0.5)*1.1,
-             gStart+span*0.030*(q/cnt3)*(0.7+0.6*rnd()), 0.52+rnd()*0.5, rnd()*0.6);
-      }
-      if(rnd()<0.55){
-        for(var q2=0;q2<16;q2++){
-          var uu2=q2/15-0.5;
-          push(sLat+(uu2*wgt*sr)*0.75+(rnd()-0.5)*0.7, uu2*wgt*cr+(rnd()-0.5)*0.9,
-               gStart+span*0.036*(q2/16), 0.5+rnd()*0.45, rnd()*0.55);
-        }
-      }
-    } else if(kind<0.78){
-      var cnt4=(isOrigin?120:50)+Math.floor(rnd()*70), spread=(isOrigin?5:4)+rnd()*8;
-      for(var r3=0;r3<cnt4;r3++){
-        push(sLat+(rnd()+rnd()+rnd()-1.5)*spread, (rnd()+rnd()+rnd()-1.5)*spread,
-             gStart+span*0.048*Math.pow(rnd(),0.6), 0.55+rnd()*0.6, rnd());
-      }
-    } else {
-      var cnt5=26+Math.floor(rnd()*40), rad2=9+rnd()*16;
-      for(var r4=0;r4<cnt5;r4++){
-        var aa=rnd()*TAU, dd=Math.pow(rnd(),0.55)*rad2;
-        push(sLat+Math.sin(aa)*dd*0.8, Math.cos(aa)*dd,
-             gStart+span*0.058*rnd(), 0.48+rnd()*0.44, rnd()*0.62);
-      }
+      for(var p2=0;p2<Math.round(cfg.outN*0.30);p2++)
+        put(jit(sites[s0],base*0.4), born+span*0.02*rnd(), 0.50+rnd()*0.48, 0.34+rnd()*0.50);
     }
-    for(var o=0;o<out.length;o++){
-      var P=out[o], n=moonNormal(P.lat,P.lon);
-      if(n[2]<0.05) continue;
-      if(!inShadow(n)) continue;
-      P.n=n; P.ph=rnd()*TAU; P.f=fam; P.g=gI; P.j=AN.jit||0; pts.push(P);
+    /* The exception to all the looseness: a handful of crisply drawn forms —
+       two large half circles plus a few smaller rings and quarter arcs — so
+       there is something deliberate to find among the organic growth. */
+    /* the one large, deliberate city */
+    var gp=null;
+    for(var gg=0;gg<600&&!gp;gg++){
+      var gc=inBand([-22,22]);
+      if(ok(gc)&&gc[2]>0.30) gp=gc;
+    }
+    if(gp){
+      greatCity(gp, cfg.outR*4.6, t0+span*0.30, t0+span*0.86, 0.34,0.50);
+      struct.push(gp);
+    }
+    var crisp=[[Math.PI,4.7],[Math.PI,3.8],[TAU,3.0],[TAU,2.2],[Math.PI/2,3.4],[Math.PI/2,2.5]];
+    for(var hc=0;hc<crisp.length;hc++){
+      if(hc>3&&rnd()<0.4) continue;
+      var hp=null;
+      for(var gh=0;gh<400&&!hp;gh++){ var cd=inBand(band); if(ok(cd)) hp=cd; }
+      if(!hp) continue;
+      var hr=cfg.outR*crisp[hc][1]*(0.85+rnd()*0.3);
+      var ht=t0+span*(0.28+0.42*(hc/crisp.length)+0.10*rnd());
+      arcRun(hp, hr, rnd()*TAU, crisp[hc][0]*(rnd()<0.5?1:-1),
+             Math.max(26,Math.round(hr*640)), ht, ht+span*0.09,
+             0.34,0.50, 0.52,0.5, 0.085);
+      struct.push(hp);
+    }
+    /* linked west to east, sharp */
+    for(var e=0;e+1<sites.length;e++){
+      if(ang(sites[e],sites[e+1])>1.5) continue;
+      var st=t0+span*(0.36+0.34*(e/Math.max(1,sites.length-1)));
+      line(sites[e], sites[e+1], st, st+span*0.20, ang(sites[e],sites[e+1])*0.012, struct);
+    }
+    var made=0,g=0;
+    while(made<cfg.fill && g++<cfg.fill*16){
+      var cn=inBand(band);
+      if(!ok(cn)) continue;
+      var near=9;
+      for(var a=0;a<struct.length;a++){ var dd=ang(cn,struct[a]); if(dd<near) near=dd; if(near<0.02) break; }
+      var prox=Math.max(0,1-near/0.30);
+      if(rnd()>Math.min(1,0.06+0.94*prox)) continue;
+      if(put(cn, t0+span*(0.45+0.55*(1-prox))*(0.85+0.3*rnd()), 0.45+rnd()*0.46, 0.10+rnd()*0.50)) made++;
     }
   }
 
-  /* Timing is per light, by its own angular distance from its own origin — not
-     by the group it happens to belong to.  Group timing made whole settlements
-     switch on at once in unrelated places, which read as erratic and spotty.
-     Distance timing makes a front that creeps outward, and the shaped groups
-     are simply revealed as it passes over them. */
-  var i2, dmaxF=[], k2;
-  for(k2=0;k2<ORIG.length;k2++) dmaxF.push(0.0001);
-  for(i2=0;i2<pts.length;i2++){
-    var P2=pts[i2];
-    P2.d=angTo(P2.n,ORIG[P2.f]);
-    if(P2.d>dmaxF[P2.f]) dmaxF[P2.f]=P2.d;
-  }
-  /* A front timed by raw angular distance crawls at the start and sprints at
-     the end, because the area inside a cap goes as 1-cos(d).  Timing by the
-     area already covered instead makes the expansion advance at a steady rate,
-     which is what "gradual" actually looks like. */
-  function areaFrac(d,dm){
-    var A0=1-Math.cos(d), Am=1-Math.cos(dm);
-    return Am>1e-6?A0/Am:0;
-  }
-  /* the south runs alone until it has taken a bit under a fifth of the
-     surface; the north pole and the equator then open as their own fronts */
-  var T0=0.30;
-  for(i2=0;i2<pts.length;i2++){
-    var Q=pts[i2], base=(Q.f===FAM_S)?0:T0, room=(Q.f===FAM_S)?T0:(0.97-T0);
-    Q.at=base+areaFrac(Q.d,dmaxF[Q.f])*room+Q.j+(rnd()-0.5)*0.008;
-    if(Q.at<0) Q.at=0; else if(Q.at>0.999) Q.at=0.999;
-  }
+  /* aims are world directions with a reach multiplier: +z is toward the
+     viewer (climbs the face), +x is toward the right limb (runs shallow) */
+  polarStage([0,-1,0], 0.00, 0.46, {founder:1, seeds:3, seedCap:CAP*0.30, sep:CAP*0.13,
+              outR:0.055, outN:26, tipColony:0.6, later:2, fill:640,
+              aims:[[0,0,1,1.00],[1,0,0.15,0.78]]});
+  /* The north is deliberately not a mirror: more founding colonies, spread
+     wider, three rays at loose angles instead of two aimed ones, and more
+     frontier colonies further out. */
+  polarStage([0, 1,0], 0.30, 0.74, {dim:0.80, seeds:5, seedCap:CAP*0.46, sep:CAP*0.17,
+              outR:0.050, outN:22, tipColony:0.45, later:4, fill:560, shapes:2,
+              aims:[[-0.75,0,0.7,0.92],[0.55,0,0.75,0.70],[-0.2,0,-0.9,0.55]]});
+  bandStage([-31,31], 0.56, 1.00, {sites:6, sep:0.40, outR:0.045, outN:14, fill:520});
+
   pts.sort(function(a,b){return a.at-b.at;});
-  /* the hover seed is exactly the polar colony — the origin group and nothing
-     past it.  A percentile of the whole field drifts as the field changes. */
-  var sd=0;
-  for(i2=0;i2<pts.length;i2++) if(pts[i2].g===0&&pts[i2].at>sd) sd=pts[i2].at;
-  pts.seed=(sd>0?sd:0.03)+0.004;
+  /* the hover seed is the founding colony at the south pole, nothing past it */
+  var sd=0.02;
+  for(var z=0;z<pts.length;z++){ if(pts[z].at>0.028) break; sd=pts[z].at; }
+  pts.seed=sd+0.004;
   return pts;
 }
 /* Every light was its own globalAlpha + fillStyle + fillRect.  At full growth
@@ -2359,7 +2547,10 @@ function drawCity(t){
     var C=cityCells[i]; if(C.at>cityP) break;
     var age=Math.min(1,(cityP-C.at)*70), n=C.n;
     var x=mx+mr*n[0], y=my-mr*n[1], fore=n[2];
-    var tw=0.72+0.28*Math.sin(t*0.0026+C.ph);
+    /* Variety lives in C.w, which is fixed per light, so the field is uneven
+       without anything ever fading.  The shimmer on top is deliberately tiny
+       and per-light: a settlement that has been built does not blink out. */
+    var tw=0.94+0.06*Math.sin(t*0.0016+C.ph);
     /* a light that has just come up burns a little brighter for its first
        moments, then settles — the switch-on is the event, not a wash of glow */
     var nu=1-Math.min(1,(cityP-C.at)*26);
@@ -2377,7 +2568,7 @@ function drawCity(t){
     }
     lx=x; ly=y; ok=true;
   }
-  g.save(); g.beginPath(); g.arc(mx,my,mr*0.985,0,TAU); g.clip();
+  g.save(); g.beginPath(); g.arc(mx,my,mr,0,TAU); g.clip();
   for(var s=0;s<SLOTS;s++){
     var c2=cityBn[s]; if(!c2) continue;
     g.globalAlpha=((s%NB)+0.72)/NB;
@@ -3466,7 +3657,8 @@ function frame(now){
   if(VIEW.qL>0.35){
     cityP+=(hover===1?dt/112:dt/375)*cityBurst(now);
   } else {
-    cityP+=(wantMoon?dt/112*cityBurst(now):-dt/70);
+      /* no decay: lights that have been switched on stay on */
+    if(wantMoon) cityP+=dt/112*cityBurst(now);
   }
   if(wantMoon&&cityP<CITY.seed) cityP+=dt*(CITY.seed/0.45);
   cityP=Math.max(0,Math.min(1,cityP));
